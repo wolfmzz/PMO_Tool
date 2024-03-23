@@ -52,6 +52,7 @@ from datetime import timedelta  # Função de duração do tempo
 import streamlit as st
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import matplotlib.colors as mcolors
 
 # Adicione o caminho para a pasta principal ao caminho do sistema
 sys.path.append(os.path.join(os.path.dirname(sys.path[0])))
@@ -419,7 +420,8 @@ def get_config_value(
 # Função que constroi o gráfico de Gantt
 def build_gantt_chart(
     df: pd.DataFrame,
-    config: pd.DataFrame
+    config: pd.DataFrame,
+    list_bar_colors: list
     ):
     """
     Função que substitui os valores da coluna pelos calculados pelo script
@@ -456,11 +458,26 @@ def build_gantt_chart(
     ax.set_yticks(np.arange(num_atividades))
     ax.set_yticklabels(atividades)
 
-    # Plota cada atividade como uma barra horizontal
+    # # Plota cada atividade como uma barra horizontal e as cores da barra são de acordo com a coluna Iniciativa
+    # for ativ in range(num_atividades):
+    #     start_date = pd.to_datetime(data_inicio[ativ])
+    #     end_date = start_date + pd.DateOffset(days = duration[ativ])
+    #     ax.barh(ativ, end_date - start_date, left = start_date, height = height_bars, align = "center")
+
+    # Lista de cores customizadas
+    custom_colors = list_bar_colors * 10
+
+    # Create a color mapping for the unique values in the "Iniciativa" column
+    iniciativas = df["Iniciativa"].unique()
+    color_mapping = dict(zip(iniciativas, custom_colors))
+
+    # Plota cada atividade como uma barra horizontal e as cores da barra são de acordo com a coluna Iniciativa
     for ativ in range(num_atividades):
         start_date = pd.to_datetime(data_inicio[ativ])
         end_date = start_date + pd.DateOffset(days = duration[ativ])
-        ax.barh(ativ, end_date - start_date, left = start_date, height = height_bars, align = 'center')
+        iniciativa = df.loc[ativ, "Iniciativa"]
+        bar_color = color_mapping[iniciativa]
+        ax.barh(ativ, end_date - start_date, left = start_date, height = height_bars, align = "center", color = bar_color)
 
     # Determina os limites do eixo de datas
     min_date = pd.to_datetime(min(data_inicio))
@@ -591,7 +608,44 @@ if UseCase_Option == "Gantt Chart":
     st.markdown("(Enquanto não houver upload de arquivo, será exibido dados da Demo)")
 
     # Titulo do SideBar
-    st.sidebar.header("Filtros")  
+    st.sidebar.header("Filtros")
+
+    # Conteúdo que pode ser selecionado
+    iniciativa_selected = st.sidebar.multiselect("Escolha Iniciativa", list_iniciativas + ["Todas"])
+
+    # Lista de cores sugeridas
+    color_suggestions = ["#5D171F", # Vermelho Prag
+                         "#202348", # Azul Prag
+                         "#002E18", # Verde Prag
+                         "#C8C8C8", # Vermelho Prag
+                         "#8B7B57", # Marrom Prag
+                         "#C8C8C8", # Cinza claro Prag
+                         "#848484", # Cinza Prag
+                         "#383838", # Cinza escuro Prag
+                         "#000000", # Preto Preto
+                         "#D04152", # Vermelho Claro
+                         "#00A254", # Verde Claro
+                         "#565DB4", # Azul Claro
+                         "#D8D0C0", # Marrom Claro
+                         ]
+
+    # Permite o usuário escolher as cores
+    barcolor_01 = st.sidebar.text_input("Barra 01", value = color_suggestions[0])
+    barcolor_02 = st.sidebar.text_input("Barra 02", value = color_suggestions[1])
+    barcolor_03 = st.sidebar.text_input("Barra 03", value = color_suggestions[2])
+    barcolor_04 = st.sidebar.text_input("Barra 04", value = color_suggestions[3])
+    barcolor_05 = st.sidebar.text_input("Barra 05", value = color_suggestions[4])
+    barcolor_06 = st.sidebar.text_input("Barra 06", value = color_suggestions[5])
+    barcolor_07 = st.sidebar.text_input("Barra 07", value = color_suggestions[6])
+    barcolor_08 = st.sidebar.text_input("Barra 08", value = color_suggestions[7])
+    barcolor_09 = st.sidebar.text_input("Barra 09", value = color_suggestions[8])
+    barcolor_10 = st.sidebar.text_input("Barra 10", value = color_suggestions[9])
+    barcolor_11 = st.sidebar.text_input("Barra 11", value = color_suggestions[10])
+    barcolor_12 = st.sidebar.text_input("Barra 12", value = color_suggestions[11])
+    barcolor_13 = st.sidebar.text_input("Barra 13", value = color_suggestions[12])
+
+    # Lista cores escolhidas
+    list_bar_colors = [barcolor_01, barcolor_02, barcolor_03, barcolor_04, barcolor_05, barcolor_06, barcolor_07, barcolor_08, barcolor_09, barcolor_10, barcolor_11, barcolor_12, barcolor_13]
 
     # Permite usuário dar upload de arquivo com dados do Quinto Andar
     Upload_Data = st.file_uploader("Upload excel com atividades", type = "xlsx")
@@ -604,9 +658,6 @@ if UseCase_Option == "Gantt Chart":
 
         # Le arquivo excel
         atividades = pd.read_excel(BytesIO(bytes_data))  
-
-    # Conteúdo que pode ser selecionado
-    iniciativa_selected = st.sidebar.multiselect("Escolha Iniciativa", list_iniciativas + ["Todas"])
 
     # Caso a iniciativa selecionada seja Todas
     if iniciativa_selected == "Todas" or iniciativa_selected == []:
@@ -621,10 +672,29 @@ if UseCase_Option == "Gantt Chart":
         atividades_filtered = atividades.query(f"Iniciativa in {iniciativa_selected}")
 
     # Cria gráfico de Gantt com a iniciativa selecionada
-    fig = build_gantt_chart(atividades_filtered, config)
+    fig = build_gantt_chart(atividades_filtered, config, list_bar_colors)
 
     # Plota gráfico na tela
     st.pyplot(fig)
+
+    # Cria botão para download do gráfico
+    if st.button("Baixar Gráfico"):
+        st.markdown("   Baixando gráfico...")
+
+        # Cria uma instancia vazia para download
+        output = BytesIO()
+
+        # Salva o arquivo em BytesIO
+        fig.savefig(output, format = "png")
+        output.seek(0)
+
+        # Cria botão de download
+        st.download_button(
+            label = "Download",
+            data = output,
+            file_name = "Gantt_Chart.png",
+            mime = "image/png",
+        )
 
 # Ends this chapter
 end_time = time.monotonic()
